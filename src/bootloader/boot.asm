@@ -188,9 +188,9 @@ print_loop:
     jmp print_loop
 
 done_print: 
-    pop si
-    pop ax
     pop bx
+    pop ax
+    pop si
     ret
 
 os_boot_msg: db 'Our operating system has booted! ', 0dh, 0ah, 0
