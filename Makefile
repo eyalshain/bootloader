@@ -15,9 +15,6 @@ $(BUILD_DIR)/main.img: bootloader kernel
 	mcopy -i $(BUILD_DIR)/main.img $(BUILD_DIR)/kernel.bin "::kernel.bin"
 
 
-
-
-
 #
 #bootloader
 #
