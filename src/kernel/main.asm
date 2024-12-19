@@ -1,11 +1,11 @@
-
+; need to remove it!
 org 0x7c00  ; setting the starting address where the code will be loaded into memory.
 
 bits 16
 
 main:
 
-    mov ax, 0
+    mov ax, 0 ; change it to: mov ax, 0x2000
     mov ds, ax
     mov es, ax
     mov ss, ax

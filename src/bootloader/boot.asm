@@ -65,20 +65,76 @@ main:
 
     mov sp, 0x7c00           ; moving the starting address to the stack pointer.
 
-   
-
-    ; interrupt 13 for reading from the disk
-    mov dl, [ebr_drive_number]
-    mov ax, 1                   ; lba index
-    mov cl, 1                   ; sector number
-    mov bx, 0x7c00              ; pointer to an address on our disk
-
-    call disk_read 
-
-    
     mov si, os_boot_msg      ; initializing si with the boot message
     call print               ; printing the message
     hlt 
+
+
+    ; 4 segments
+    ; reserved segment = 1 sector - boot sector
+    ; there is 2 FAT, each one is 9 sectors => 18 sectors
+    ; Root directory
+    ; Data
+
+    mov ax, [bdb_sectors_per_fat]
+    mov bl, [bdb_fat_count]
+    xor bh, bh
+    mul bx  ; ax * bx => 9 * 2 => 18 sectors => ax
+    add ax, bdb_reserved_sectors ;  now ax contains the lba value of the root directory.
+
+    push ax ;saving ax so we can do another calculation
+
+    mov ax, [bdb_dir_entries_count]
+    shl ax, 5 ; ax *= 32 (2^5): multiplying the number of directory entries by 32 - bytes per entry.
+    xor dx, dx
+    div word [bdb_bytes_per_sector] ;(ax*32) / bytes per sector = how many directory entries per sector
+
+    ; there might be a reminder, like 15.25, so we gonna check to see if there is
+    ; a reminder - increment ax (now ax will have 16), if not, jump to rootDirAfter
+    test dx, dx
+    jz RootDirAfter
+    inc ax
+
+
+; reading the root directory from the disk
+RootDirAfter: 
+    mov cl, al ; directory entries per sector 
+    pop ax     ; restoring the lba value of the root directory
+    mov dl, [ebr_drive_number]
+    mov bx, buffer
+    call disk_read
+
+    xor bx, bx
+    mov di, buffer
+
+search_kernel:
+    mov si, kernel_file_name
+    
+    ; size of the kernel_file_name. each directory entry is 32 bytes.
+    ; the first 8 bytes (and another 3 for extension, so 11 bytes total) are for the name of the file
+    mov cx, 11          
+    push di             ; the buffer
+    repe cmpsb          ; comparing each byte of the kernel file name, and the directory entry name
+    pop di          
+    je kernel_found     
+
+    add di, 32          ; if not equal, we gonna move to the next entry (each directory entry is 32 bytes)
+    inc bx              ; using bx as an index for a loop, until we reach and check all the entries possible
+    cmp bx, [bdb_dir_entries_count]
+    jl search_kernel
+    jmp kernel_not_found
+
+
+kernel_found: 
+
+kernel_not_found:
+    mov si, msg_kernel_not_found
+    call print
+
+    hlt 
+    jmp halt
+
+
 
 halt:
     jmp halt    ; booting and then freezing the operating system.
@@ -195,6 +251,17 @@ done_print:
 
 os_boot_msg: db 'Our operating system has booted! ', 0dh, 0ah, 0
 read_failure db 'failed to read the disk. ', 0dh, 0ah, 0
+
+kernel_file_name db 'KERNEL  BIN'
+msg_kernel_not_found db 'KERNEL.BIN was not found'
+
+kernel_cluster dw 0
+kernel_load_segment equ 0x2000     ; available memory 
+kernel_load_offset equ 0
+
+
+
+
 
 ; boot sector have 512 bytes. the last 2 bytes contains this signature (0xAA55)
 ; so we are taking 510 bytes (to leave 2 bytes) minus the space that this program takes ($-$$).
