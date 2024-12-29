@@ -205,7 +205,7 @@ readFinish:
     mov ds, ax
     mov es, ax
 
-    jmp kernel_load_segment:kernel_load_offset
+    jmp kernel_load_segment:kernel_load_offset  ; jmp to the kernel file
 
     hlt
 
