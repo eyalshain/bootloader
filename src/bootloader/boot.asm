@@ -140,6 +140,8 @@ kernel_found:
     ; reading the fat table
     mov ax, [di+26]     ;first logical cluster - index into the fat table;
     mov [kernel_cluster], ax
+
+    mov ax, [bdb_reserved_sectors]
     mov bx, buffer
     mov cl, [bdb_sectors_per_fat]
     mov dl, [ebr_drive_number]
@@ -325,7 +327,7 @@ done_print:
     ret
 
 os_boot_msg: db 'welcome! BOBO_OS is loading...', 0dh, 0ah, 0
-read_failure db 'failed to read the disk. ', 0
+read_failure db 'failed to read the disk. ', 0dh, 0ah, 0
 
 kernel_file_name db 'KERNEL  BIN'
 
